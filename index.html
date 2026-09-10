@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: none; overflow: hidden; }
+</style>
+</head>
+<body>
+<div id="container">
+  <div id="info"></div>
+  <div id="player"></div>
+</div>
+<script async src="https://www.youtube.com/iframe_api"></script>
+<script async src="https://cdn.jsdelivr.net/gh/iamfugui/youtube-adb@main/index.user.js"></script>
+<script>
+const url = new URLSearchParams(window.location.search);
+let songID = url.get("watch?v");
+let listID = url.get("list");
+let volume = url.get("volume") || 45;
+let width = url.get("w") || 1920;
+let height = url.get("h") || 1080;
+let quality = url.get("quality") || "default";
+let forceQuality = url.get("forcequality") === "true";
+let speed = url.get("speed") || 1;
+let startSeconds = url.get("t") || 0;
+let index = url.get("index") || 0;
+let random = url.get("random") === "true";
+let loop = url.get("loop") !== "false";
+let fade = url.get("fade") === "true";
+let debugMode = url.get("debug") === "true";
+let hide = url.get("hide") === "true";
+let hideWhenStopped = url.get("hideWhenStopped") === "true";
+let controls = url.get("controls") === "true";
+let title = url.get("title") === "true";
+
+hide ? (document.querySelector("#player").style.display = "none") : null;
+
+function onYouTubeIframeAPIReady() {
+  const player = new YT.Player("player", {
+    width: width,
+    height: height,
+    playerVars: {
+      autoplay: 1,
+      controls: controls ? 1 : 0,
+      showinfo: 0,
+      modestbranding: 1,
+      playinline: 1,
+      disablekb: 1,
+      fs: 0,
+      cc_load_policy: 0,
+      iv_load_policy: 3,
+      autohide: 1,
+      enablejsapi: 1,
+      rel: 0,
+    },
+    events: { onReady, onStateChange, onError },
+  });
+
+  function onReady(event) {
+    player.setVolume(volume);
+    player.setPlaybackQuality(quality);
+    player.setPlaybackRate(Number(speed));
+    player.setLoop(loop);
+
+    if (songID && listID) {
+      player.cueVideoById({ videoId: songID });
+      player.addEventListener("onStateChange", ({ data }) => {
+        if (data === 0) {
+          player.stopVideo();
+          player.cuePlaylist({ list: listID });
+        }
+      });
+    }
+    if (!songID && listID) {
+      player.loadPlaylist({ list: listID, index });
+    }
+    if (songID && !listID) {
+      player.cueVideoById({ videoId: songID });
+    }
+  }
+
+  function onStateChange(event) {
+    if (event.data === -1) {
+      if (random) player.setShuffle(true);
+      if (index !== 0) player.playVideo(index + 1);
+      if (!index && random) { player.stopVideo(); player.nextVideo(); }
+    }
+    if (event.data === 0 && listID && loop) {
+      player.cuePlaylist({ list: listID, index });
+    }
+    if (event.data === 1) {
+      document.querySelector("#info").innerHTML = "";
+      player.playVideo();
+    }
+  }
+
+  function onError() {
+    player.nextVideo();
+  }
+}
+</script>
+</body>
+</html>
